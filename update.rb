@@ -11,11 +11,10 @@ def update
 end
 
 def write()
-  performance = CSV.table("output/sandbox_v1(17-20)/新馬/top.csv", {:encoding => 'UTF-8', :converters => nil})
+  performance = CSV.table("output/sandbox_v2(17-20)/新馬/performance.csv", {:encoding => 'UTF-8', :converters => nil})
   hit = performance[0]
   rec = performance[1]
   csv_row = [@jockey_coef,@stallion_coef,@trainer_coef]
-  csv_row2 = [@jockey_coef,@stallion_coef,@trainer_coef]
   hit.each_with_index do |h,i|
     next if i == 0
     next unless h[1]
@@ -24,15 +23,11 @@ def write()
   rec.each_with_index do |r,i|
     next if i == 0
     next unless r[1]
-    csv_row2.push r[1].strip
+    csv_row.push r[1].strip
   end
 
-  CSV.open('output/sandbox_v1(17-20)/新馬/top_hit_log.csv','a') do |csv| 
+  CSV.open('output/sandbox_v2(17-20)/新馬/log.csv','a') do |csv| 
     csv << csv_row
-  end
-
-  CSV.open('output/sandbox_v1(17-20)/新馬/top_rec_log.csv','a') do |csv| 
-    csv << csv_row2
   end
 
 end

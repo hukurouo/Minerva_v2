@@ -11,17 +11,17 @@ def prepare_finish
   end
 
   stallion_map = {} 
-  stallion_index = CSV.table("intermediate/horse/horse_stallion_index.csv", {:encoding => 'UTF-8', :converters => nil})
+  stallion_index = CSV.table("intermediate/stallion/horse_stallion_index.csv", {:encoding => 'UTF-8', :converters => nil})
   stallion_index.each do |stallion_index|
     stallion_map[stallion_index[:id]] = stallion_index[:stallion_id]
   end
 
   (1..10).each do |i|
     place =  format("%02<number>d", number: i)
-    CSV.open("intermediate/finished/2020/#{place}/top_finished.csv", "w") do |csv| 
+    CSV.open("intermediate/finished/2020_v2/#{place}/top_finished.csv", "w") do |csv| 
       csv << finished_top
     end
-    CSV.open("intermediate/finished/2020/#{place}/wide_finished.csv", "w") do |csv| 
+    CSV.open("intermediate/finished/2020_v2/#{place}/wide_finished.csv", "w") do |csv| 
       csv << finished_wide
     end
     race_result = CSV.table("datas/2020/#{place}/race_result.csv", {:encoding => 'UTF-8', :converters => nil})
@@ -49,8 +49,14 @@ def prepare_finish
         data.each do |d|
           if d[:race_type] == race_type
             flag = false
-            top_row << d[:win_rate]
-            wide_row << d[:win3_rate]
+            total = d[:total].to_f
+            coef = 1
+            coef = 0.2 if total.between?(1, 2)  
+            coef = 0.4 if total.between?(3, 5)  
+            coef = 0.6 if total.between?(6, 7)
+            coef = 0.8 if total.between?(8, 10)
+            top_row << (d[:win_rate].to_f * coef).round(1)
+            wide_row << (d[:win3_rate].to_f * coef).round(1)
           end
         end
         if flag
@@ -66,7 +72,7 @@ def prepare_finish
 end
 
 def write(data, place, csv_name)
-  CSV.open("intermediate/finished/2020/#{place}/#{csv_name}.csv", "a") do |csv| 
+  CSV.open("intermediate/finished/2020_v2/#{place}/#{csv_name}.csv", "a") do |csv| 
     csv << data
   end
 end
