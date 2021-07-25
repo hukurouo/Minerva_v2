@@ -48,7 +48,7 @@ def arrange_time(tmp_races, year, place)
     if mod_times[index] == ""
       mod_diffs << ""
     else
-      mod_diffs << (mod_times[index] - mod_times[index-1]).round(2)
+      mod_diffs << (mod_times[index] - mod_times[0]).round(2)
     end
   end
   tmp_races.each_with_index do |race, index|

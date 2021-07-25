@@ -1,15 +1,17 @@
 require "csv"
 
+@finished_dir_name = "2020_v5"
+
 def performance
-  top = CSV.table("intermediate/finished/2020_v2/top.csv", {:encoding => 'UTF-8', :converters => nil})
+  top = CSV.table("intermediate/finished/#{@finished_dir_name}/top.csv", {:encoding => 'UTF-8', :converters => nil})
   top_map = {}
   top.each do |t|
     top_map[t[:id]] = {horseNumber: t[:horsenumber], horseName: t[:horsename]}
   end
-  wide = CSV.table("intermediate/finished/2020_v2/wide.csv", {:encoding => 'UTF-8', :converters => nil})
+  wide = CSV.table("intermediate/finished/#{@finished_dir_name}/wide.csv", {:encoding => 'UTF-8', :converters => nil})
   wide_map = {}
   wide.each do |t|
-    wide_map[t[:id]] = t[:horsenumber]
+    wide_map[t[:id]] = {horseNumber: t[:horsenumber], points: t[:widepoint]}
   end
  
   result = []
@@ -48,16 +50,20 @@ def performance
     odds_map[id][:wide] = wide
 
     index.each do |j|
-      next unless j[:racename].include?("新馬")
+      next unless j[:racename].include?("(G") #if j[:racename].include?("新馬") || j[:racename].include?("勝クラス") || j[:racename].include?("未勝利") #unless j[:racename].include?("未勝利") #
       id = j[:id]
       
       top_1 = top_map[id][:horseNumber] if top_map[id]
       top_number = race_result_map[id][:horseNumber]
 
-      finished_wide_number = wide_map[id] if wide_map[id]
+      finished_wide_number = wide_map[id][:horseNumber] if wide_map[id][:horseNumber]
+      finished_wide_points = wide_map[id][:points] if wide_map[id][:points]
       wide_1 = finished_wide_number.split(",")[0]
       wide_2 = finished_wide_number.split(",")[1]
       wide_3 = finished_wide_number.split(",")[2]
+      wide_point_1 = finished_wide_points.split(",")[0].to_f
+      wide_point_2 = finished_wide_points.split(",")[1].to_f
+      wide_point_3 = finished_wide_points.split(",")[2].to_f
       wide3ten = [wide_1,wide_2,wide_3]
       wide2ten = [wide_1,wide_2]
       tan_odds = odds_map[id][:tan].to_f
@@ -70,51 +76,80 @@ def performance
       end
       #ワイド
       result_row << wide_calc(wide2ten,odds_map[id][:wide])
+      result_row << wide_calc(wide3ten,odds_map[id][:wide])
+      #ワイドポイント
+      #result_row << (wide_point_1 + wide_point_2)
       result << result_row
     end
   end
-  total = total_eval(result)
+  #result = result.sort_by{|x| x[4]*-1 }
+  totals = total_eval(result)
+  hit_rates = hit_rate_calc(result)
+  recovery_rates = recovery_calc(totals, result)
+  p [totals,hit_rates,recovery_rates]
   result.unshift(["----------"])
-  result.unshift(["total", total[0][0], total[1][0]])
-  result.unshift(["reco_rate", total[0][1], total[1][1]])
-  result.unshift(["hit_rate", total[0][2], total[1][2]])
-  result.unshift(["name","tan","wide"])
-  CSV.open("output/sandbox_v2(17-20)/新馬/performance.csv", "w") do |csv| 
+  result.unshift(totals)
+  result.unshift(recovery_rates)
+  result.unshift(hit_rates)
+  result.unshift(["name","tan","wide","wide3","wide1point"])
+  CSV.open("output/sandbox_v6(17-20)/重賞/performance.csv", "w") do |csv| 
     result.each do |data|
       csv << data
     end
   end
 end
 
-def total_eval(top)
-  total = 0
-  total_wide=0
-  count = top.size()
-  total_amount = count * 1000
-  total_amount_wide = count * 1000
-  hit_count = 0
-  hit_count_wide = 0
-  top.each do |t|
-    total += t[1].to_i
-    total_wide += t[2].to_i
-    if t[1].to_i != -1000
-      hit_count += 1
+def total_eval(result)
+  col_num = result[1].length
+  totals = ["total"]
+  col_num.times do |i|
+    next if i == 0
+    sum = 0
+    result.each do |r|
+      sum += r[i]
     end
-    if t[2].to_i != -1000
-      hit_count_wide += 1
-    end
+    totals.push sum
   end
-  hit_rate = hit_count.to_f / count * 100
-  recovery_rate = ((total_amount + total).to_f / (total_amount)) * 100
-  hit_rate_wide = hit_count_wide.to_f / count * 100
-  recovery_rate_wide = ((total_amount_wide + total_wide).to_f / (total_amount_wide)) * 100
-  totals = [[total, recovery_rate.round(2).to_s + "%", hit_rate.round(2).to_s + "%"],[total_wide, recovery_rate_wide.round(2).to_s + "%", hit_rate_wide.round(2).to_s + "%"]]
-  p totals
+  totals
+end
+
+def hit_rate_calc(result)
+  col_num = result[1].length
+  hit_rates = ["hit_rate"]
+  (col_num).times do |i|
+    next if i == 0
+    count = 0
+    hit = 0
+    result.each do |r|
+      if r[i] != -1000
+        hit += 1
+        count += 1
+      else
+        count += 1
+      end
+    end
+    rate = (hit.to_f / count)*100
+    hit_rates.push (rate.round(2).to_s + "%")
+  end
+  hit_rates
+end
+
+def recovery_calc(totals, result)
+  totals
+  kakekin = result.length * 1000
+  recovery_rates = ["recovery_rate"]
+  totals.each_with_index do |t,i|
+    next if i == 0
+    rate = 100 * (t + kakekin).to_f / kakekin
+    recovery_rates.push (rate.round(2).to_s + "%")
+  end
+  recovery_rates
 end
 
 def wide_calc(box,odds)
   wide_money = -1000
   coef = 10
+  coef = 3.3 if box.length == 3
   odds.each do |o|
     if is_hit_wide?(box,o[:horse_number])
       wide_money += (o[:odds]*coef).round()

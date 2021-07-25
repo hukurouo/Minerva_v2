@@ -8,7 +8,7 @@ Dotenv.load
 
 #FileUtils.mkdir_p('datas/2019', :mode => 755)
 
-@result_header = "id,raceName,rank,frameNumber,horseNumber,horseName,horseId,sexAge,weight,jockeyName,time,timeDiff,timePoint,passingOrder,time3f,oddsNum,oddsRank,horseWeight,horseWeightDiff,memo".split(",")
+@result_header = "id,raceName,rank,frameNumber,horseNumber,horseName,horseId,sexAge,weight,jockeyName,time,timeDiff,timePoint,passingOrder,time3f,oddsNum,oddsRank,horseWeight,horseWeightDiff,memo,trainerId,arrangeTime,arrangeTimeDiff".split(",")
 
 def login
   agent = Mechanize.new
@@ -36,11 +36,12 @@ def get_data_logined_page(id,agent, year, place)
   weather = race_info.split("/")[1].split(":")[1].strip.gsub(/[[:space:]]/, '')
   race_cond = race_info.split("/")[2].split(":")[1].strip.gsub(/[[:space:]]/, '')
   race_cond_num = page.xpath('//table[@class="result_table_02"]/tr')[0].css('td').text.strip.split(" ")[0]
-  race_info_csv = [id, name, race_type, race_dir, race_length, weather, race_cond, race_cond_num]
-  CSV.open("datas/#{year}/#{place}/index.csv", "a") do |csv| 
+  date = page.xpath('//p[@class="smalltxt"]').text.split(" ")[0].gsub(/年|月/,"/").gsub(/日/,"")
+  race_info_csv = [id, name, race_type, race_dir, race_length, weather, race_cond, race_cond_num, date]
+  CSV.open("datas/#{year}/#{place}/index_fixed.csv", "a") do |csv| 
     csv << race_info_csv
   end
-  if year == "2020"
+  if year == "2021"
     results = get_odds(page, id)
     CSV.open("datas/#{year}/#{place}/odds.csv", "a") do |csv| 
       results.each do |data|
@@ -89,7 +90,7 @@ end
 
 def main 
   agent = login()
-  year = "2020"
+  year = "2021"
   race_info = CSV.table("race_info.csv", {:encoding => 'UTF-8', :converters => nil})
   race_info.each_with_index do |race, index|
     place = race[:id]
@@ -98,7 +99,7 @@ def main
     CSV.open("datas/#{year}/#{place}/race_result.csv", "w") do |csv| 
       csv << "id,raceName,rank,frameNumber,horseNumber,horseName,horseId,sexAge,weight,jockeyName,jockeyId,time,timeDiff,timePoint,passingOrder,time3f,oddsNum,oddsRank,horseWeight,horseWeightDiff,memo,trainerId".split(",")
     end
-    CSV.open("datas/#{year}/#{place}/index.csv", "w") do |csv| 
+    CSV.open("datas/#{year}/#{place}/index_fixed.csv", "w") do |csv| 
       csv << "id,raceName,courseType,courseDir,courseLength,weather,courseStatus,courseStatusNum".split(",")
     end
     CSV.open("datas/#{year}/#{place}/odds.csv", "w") do |csv| 
@@ -121,12 +122,6 @@ def main
 end
 
 def get_odds(doc,id)
-  #agent = login()
-  #id = "202001010202"
-  #url = "https://db.netkeiba.com/race/#{id}/"
-  #page = agent.get(url)
-  #table = page.xpath('//table[@class="pay_table_01"]/tr')
-
   table = doc.xpath('//table[@class="pay_table_01"]/tr')
   results = []
 
@@ -227,7 +222,7 @@ def get_odds(doc,id)
     end
   end
 
-  p results
+  results
 end
 
 main()
