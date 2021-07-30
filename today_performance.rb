@@ -1,12 +1,27 @@
 require "csv"
 
+# 定数
+coursetype = ARGV[0]
+if coursetype == "siba"
+  @coursetype = "芝"
+else
+  @coursetype = "ダ"
+end
+racename = ARGV[1]
+if racename == "misyouri"
+  @racename = "未勝利"
+elsif racename == "sinba"
+  @racename = "新馬"
+elsif racename == "class"
+  @racename = "勝クラス"
+end
+
 def performance
-
   result = []
-  (1..10).each do |i|
+  #(1..10).each do |i|
+    i = 4
+    place_result = []
     place =  format("%02<number>d", number: i)
-
-    next if place != "04"
 
     index = CSV.table("intermediate/datas/#{place}/index.csv", {:encoding => 'UTF-8', :converters => nil})
     race_result = CSV.table("intermediate/datas/#{place}/race_result.csv", {:encoding => 'UTF-8', :converters => nil})
@@ -32,14 +47,19 @@ def performance
     end
 
     index.each do |j|
-      next unless j[:coursetype] == "芝" # "x"のみキャッチ
-      #next unless j[:racename].include?("(G") #if j[:racename].include?("新馬") || j[:racename].include?("勝クラス") || j[:racename].include?("未勝利") #unless j[:racename].include?("未勝利") #
+      next unless j[:coursetype] == @coursetype # "x"のみキャッチ
+      #next unless j[:racename].include?("(G") #if j[:racename].include?("新馬") || j[:racename].include?("勝クラス") || j[:racename].include?("未勝利") #unless j[:racename].include?("未勝利")
+      next unless j[:racename].include?(@racename)
+      #next if j[:racename].include?("新馬") || j[:racename].include?("勝クラス") || j[:racename].include?("未勝利") || j[:racename].include?("(G")
       id = j[:id]
-      
+      begin
       top_1 = top_map[id][:horseNumber] if top_map[id]
       top_number = race_result_map[id][:horseNumber]
-
       tan_odds = odds_map[id][:tan].to_f
+      rescue
+        p place
+        p id
+      end
       result_row = [race_result_map[id][:raceName]]
       #単勝
       if top_number == top_1
@@ -49,20 +69,28 @@ def performance
       end
 
       result << result_row
+      place_result << result_row
     end
-    totals = total_eval(result)
-    hit_rates = hit_rate_calc(result)
-    recovery_rates = recovery_calc(totals, result)
-    p [totals,hit_rates,recovery_rates]
-    result.unshift(["----------"])
-    result.unshift(totals)
-    result.unshift(recovery_rates)
-    result.unshift(hit_rates)
-    result.unshift(["name","tan"])
-    CSV.open("output/data_ana_v1/#{place}/performance.csv", "w") do |csv| 
-      result.each do |data|
-        csv << data
-      end
+    write(place_result, place)
+  #end
+  place = "all"
+  #write(result, place)
+end
+
+def write(result, place)
+  return if result.length == 0
+  totals = total_eval(result)
+  hit_rates = hit_rate_calc(result)
+  recovery_rates = recovery_calc(totals, result)
+  p [totals,hit_rates,recovery_rates]
+  result.unshift(["----------"])
+  result.unshift(totals)
+  result.unshift(recovery_rates)
+  result.unshift(hit_rates)
+  result.unshift(["name","tan"])
+  CSV.open("output/data_ana_v1/#{place}/performance.csv", "w") do |csv| 
+    result.each do |data|
+      csv << data
     end
   end
 end

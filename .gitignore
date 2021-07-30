@@ -5,3 +5,4 @@ output
 .env
 *.csv
 *.txt
+memo.md

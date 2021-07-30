@@ -6,7 +6,7 @@ require 'mechanize'
 require 'dotenv'
 Dotenv.load
 
-@place = "05"
+@place = "10"
 
 def login
   agent = Mechanize.new

@@ -7,7 +7,7 @@ require 'dotenv'
 Dotenv.load
 
 @dir_name = "202107"
-@file_name = "20210725"
+@file_name = "20210731"
 
 def login
   agent = Mechanize.new
